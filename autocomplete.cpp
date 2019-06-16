@@ -78,7 +78,7 @@ void Autocomplete::minimize()
 {
 	vector<MinimizeHelp> vec1(m_nodeCount);
 	vector<MinimizeHelp> vec2(m_nodeCount);
-	vector<bool> visited(m_nodeCount);
+	vector<MinimizeHelp *> eq_class_representatives;
 
 	putTreeInVector(vec1);
 
@@ -87,50 +87,44 @@ void Autocomplete::minimize()
 	vector<MinimizeHelp> &ref1 = vec1;
 	vector<MinimizeHelp> &ref2 = vec2;
 	bool has_changed;
-	size_t new_node_count;
 
 	do
 	{
-		for (size_t i = 0; i < m_nodeCount; ++i)
-			visited[i] = false;
-
+		eq_class_representatives.clear();
 		has_changed = false;
-		new_node_count = 0;
 
 		for (size_t i = 0; i < m_nodeCount; ++i)
 		{
-			if (visited[i] == true)
-				continue;
+			bool eq_class_found = false;
 
-			visited[i] = true;
-			ref2[i].eq_class = new_node_count;
-
-			for (size_t j = i + 1; j < m_nodeCount; ++j)
+			for (size_t j = 0; j < eq_class_representatives.size(); ++j)
 			{
-				if (visited[j] == true)
-					continue;
-
-				if (ref1[i].eq_class == ref1[j].eq_class)
+				if (ref1[i].eq_class == eq_class_representatives[j]->eq_class)
 				{
-					if (areEquivalent(ref1[i].p_node, ref1[j].p_node, ref1))
+					if (areEquivalent(ref1[i].p_node, eq_class_representatives[j]->p_node, ref1))
 					{
-						ref2[j].eq_class = new_node_count;
-						visited[j] = true;
+						ref2[i].eq_class = j;
+						eq_class_found = true;
+						break;
 					}
 					else
 						has_changed = true;
 				}
 			}
 
-			++new_node_count;
+			if (!eq_class_found)
+			{
+				ref2[i].eq_class = eq_class_representatives.size();
+				eq_class_representatives.push_back(&ref1[i]);
+			}
 		}
 
 		swap(ref1, ref2);
 	} while (has_changed);
 
-	buildNewTree(ref1, new_node_count);
+	buildNewTree(ref1, eq_class_representatives.size());
 
-	m_nodeCount = new_node_count;
+	m_nodeCount = eq_class_representatives.size();
 }
 
 void Autocomplete::setMaxSuggestions(size_t m)
